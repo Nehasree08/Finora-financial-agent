@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -9,7 +11,10 @@ from utils.errors import AnalysisError
 init_db()
 
 app = FastAPI(title="FINORA", description="Persistent financial dataset ingestion and profiling engine.", version="2.1.0")
-app.add_middleware(CORSMiddleware, allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+frontend_urls = os.getenv("FRONTEND_URLS", os.getenv("FRONTEND_URL", ""))
+allowed_origins = [url.strip().rstrip("/") for url in frontend_urls.split(",") if url.strip()]
+allowed_origins.extend(["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3001", "http://127.0.0.1:3001"])
+app.add_middleware(CORSMiddleware, allow_origins=allowed_origins, allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
 app.include_router(router)
 
 
