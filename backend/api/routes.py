@@ -8,6 +8,16 @@ from services.repository import compare_reviews, compare_within_review, delete_r
 router = APIRouter()
 
 
+@router.get("/")
+def root():
+    return {
+        "service": "FINORA financial statement review API",
+        "status": "online",
+        "health": "/health",
+        "docs": "/docs",
+    }
+
+
 @router.get("/health")
 def health():
     return {"ok": True, "engine": "finora-python", "mode": "sqlite-persistent-ingestion", "database": "fin_audit.db"}
