@@ -1,0 +1,5 @@
+'use client';
+import AppShell from '../../components/AppShell';
+import UploadPanel from '../../components/UploadPanel';
+import { ShieldCheck, Database, BrainCircuit } from 'lucide-react';
+export default function Upload(){return <AppShell><div className="page upload-page"><div className="section-head big"><div><span className="eyebrow">INGESTION GATE</span><h2>Bring any financial dataset.</h2><p>No fixed schema. No fake rows. FINORA discovers what your file actually contains.</p></div></div><UploadPanel onDone={(id)=>window.location.href=`/reviews/${id}`}/><div className="principles"><div><Database size={18}/><b>Universal schema discovery</b><span>Companies, dates, currencies, identifiers, measures and categories are profiled from the uploaded evidence.</span></div><div><ShieldCheck size={18}/><b>Source-preserving</b><span>Original row values are persisted so downstream numbers can be traced back to the evidence.</span></div><div><BrainCircuit size={18}/><b>AI-ready by design</b><span>AI sits above the deterministic data layer instead of inventing the underlying numbers.</span></div></div></div></AppShell>}

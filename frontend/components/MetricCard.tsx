@@ -1,0 +1,2 @@
+import { ArrowDownRight, ArrowUpRight, Minus, LucideIcon } from 'lucide-react';
+export default function MetricCard({label,value,sub,icon:Icon,tone='default'}:{label:string;value:string;sub?:string;icon:LucideIcon;tone?:string}){return <div className={`metric ${tone}`}><div className="metric-head"><span>{label}</span><Icon size={16}/></div><strong>{value}</strong><div className="metric-sub">{sub?.startsWith('+')?<ArrowUpRight size={13}/>:sub?.startsWith('-')?<ArrowDownRight size={13}/>:<Minus size={13}/>} {sub||'Awaiting dataset'}</div></div>}

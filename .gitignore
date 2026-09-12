@@ -1,0 +1,10 @@
+frontend/node_modules/
+frontend/.next/
+frontend/.vercel/
+frontend/.env*.local
+backend/__pycache__/
+backend/**/__pycache__/
+backend/.pytest_cache/
+backend/fin_audit.db
+*.pyc
+.DS_Store
