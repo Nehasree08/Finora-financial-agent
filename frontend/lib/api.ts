@@ -24,10 +24,35 @@ export type ComparisonOptions = {
 const API = process.env.NEXT_PUBLIC_API_URL || (process.env.NODE_ENV === 'production' ? 'https://finora-financial-agent.onrender.com' : 'http://127.0.0.1:8000');
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API}${path}`, { ...init, cache: 'no-store' });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(body.detail || `Request failed (${res.status})`);
-  return body;
+  try {
+    const fullUrl = `${API}${path}`;
+    const method = init?.method || 'GET';
+    console.log(`[API] ${method} ${fullUrl}`, init);
+    
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60000); // 60 second timeout
+    
+    const res = await fetch(fullUrl, { ...init, cache: 'no-store', signal: controller.signal });
+    clearTimeout(timeout);
+    
+    console.log(`[API] ${method} ${fullUrl} → ${res.status}`);
+    
+    if (!res.ok) {
+      let body: any = {};
+      try {
+        body = await res.json();
+      } catch {
+        body = { error: `HTTP ${res.status}` };
+      }
+      throw new Error(body.detail || body.error || `Request failed (${res.status})`);
+    }
+    
+    const body = await res.json().catch(() => ({}));
+    return body;
+  } catch (error: any) {
+    console.error(`[API Error] ${error.message}`, error);
+    throw error;
+  }
 }
 
 export function apiBase() { return API; }

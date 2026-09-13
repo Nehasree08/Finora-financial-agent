@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FINORA Upload Test</title>
+</head>
+<body>
+    <h1>FINORA Upload Test</h1>
+    <input type="file" id="fileInput" />
+    <button onclick="testUpload()">Test Upload</button>
+    <pre id="output"></pre>
+
+    <script>
+        const API_URL = 'http://127.0.0.1:8000';
+        
+        async function testUpload() {
+            const file = document.getElementById('fileInput').files[0];
+            if (!file) {
+                alert('Please select a file');
+                return;
+            }
+            
+            const output = document.getElementById('output');
+            output.textContent = 'Uploading...';
+            
+            try {
+                const form = new FormData();
+                form.append('file', file);
+                form.append('company', 'Apple');
+                
+                const response = await fetch(`${API_URL}/reviews`, {
+                    method: 'POST',
+                    body: form,
+                    credentials: 'omit'
+                });
+                
+                const data = await response.json();
+                output.textContent = `Status: ${response.status}\n\nResponse:\n${JSON.stringify(data, null, 2)}`;
+            } catch (error) {
+                output.textContent = `Error: ${error.message}\n${error.stack}`;
+            }
+        }
+    </script>
+</body>
+</html>
