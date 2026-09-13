@@ -49,7 +49,6 @@ def _read_csv(content: bytes) -> pd.DataFrame:
             return pd.read_csv(
                 io.BytesIO(content),
                 encoding=encoding,
-                low_memory=False,
                 engine="python",
             )
 
@@ -68,10 +67,7 @@ def _read_csv(content: bytes) -> pd.DataFrame:
 def _read_excel(content: bytes, ext: str) -> list[LoadedTable]:
     last_error: Exception | None = None
 
-    if ext == ".xlsx":
-        engines = ("openpyxl",)
-    else:
-        engines = ("xlrd",)
+    engines = ("openpyxl",) if ext == ".xlsx" else ("xlrd",)
 
     for engine in engines:
         try:
@@ -119,15 +115,7 @@ def _usable_dataframe(df: pd.DataFrame) -> bool:
         values = df[column]
 
         if values.notna().any():
-            non_empty = (
-                values
-                .astype(str)
-                .str.strip()
-                .ne("")
-                .any()
-            )
-
-            if non_empty:
+            if values.astype(str).str.strip().ne("").any():
                 return True
 
     return False
@@ -194,13 +182,11 @@ def read_uploaded_file(
             f"Ignored {ignored_count} empty worksheet(s)."
         )
 
-    file_hash = hashlib.sha256(content).hexdigest()
-
     return LoadedFile(
         filename=filename,
         file_type=file_type,
         size_bytes=file_size,
-        sha256=file_hash,
+        sha256=hashlib.sha256(content).hexdigest(),
         tables=usable_tables,
         notes=notes,
     )
