@@ -89,17 +89,26 @@ CREATE INDEX IF NOT EXISTS idx_runs_review ON analysis_runs(review_id, created_a
 
 
 def connect(path: Path | str | None = None) -> sqlite3.Connection:
-    path = path or DB_PATH
-    conn = sqlite3.connect(str(path))
+    database_path = path or DB_PATH
+
+    conn = sqlite3.connect(
+        str(database_path),
+        timeout=30,
+    )
+
     conn.row_factory = sqlite3.Row
+
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.execute("PRAGMA journal_mode = WAL")
-    conn.execute("PRAGMA busy_timeout = 5000")
+    conn.execute("PRAGMA busy_timeout = 30000")
+    conn.execute("PRAGMA synchronous = NORMAL")
+    conn.execute("PRAGMA journal_mode = DELETE")
+
     return conn
 
 
 def init_db(path: Path | str | None = None) -> None:
     conn = connect(path)
+
     try:
         conn.executescript(SCHEMA)
         conn.commit()
@@ -108,25 +117,37 @@ def init_db(path: Path | str | None = None) -> None:
 
 
 @contextmanager
-def transaction(path: Path | str | None = None) -> Iterator[sqlite3.Connection]:
+def transaction(
+    path: Path | str | None = None,
+) -> Iterator[sqlite3.Connection]:
+
     conn = connect(path)
+
     try:
         yield conn
         conn.commit()
+
     except Exception:
         conn.rollback()
         raise
+
     finally:
         conn.close()
 
 
 def dumps(value: Any) -> str:
-    return json.dumps(value, ensure_ascii=False, separators=(",", ":"), default=str)
+    return json.dumps(
+        value,
+        ensure_ascii=False,
+        separators=(",", ":"),
+        default=str,
+    )
 
 
 def loads(value: str | None, default: Any) -> Any:
     if not value:
         return default
+
     try:
         return json.loads(value)
     except json.JSONDecodeError:
