@@ -8,6 +8,7 @@ import pandas as pd
 
 from utils.errors import AnalysisError
 
+
 MAX_UPLOAD_BYTES = 25 * 1024 * 1024
 SUPPORTED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
 
@@ -67,38 +68,35 @@ def _read_csv(content: bytes) -> pd.DataFrame:
 def _read_excel(content: bytes, ext: str) -> list[LoadedTable]:
     last_error: Exception | None = None
 
-    engines = ("openpyxl",) if ext == ".xlsx" else ("xlrd",)
+    engine = "openpyxl" if ext == ".xlsx" else "xlrd"
 
-    for engine in engines:
-        try:
-            workbook = pd.ExcelFile(
-                io.BytesIO(content),
-                engine=engine,
+    try:
+        workbook = pd.ExcelFile(
+            io.BytesIO(content),
+            engine=engine,
+        )
+
+        tables: list[LoadedTable] = []
+
+        for sheet in workbook.sheet_names:
+            dataframe = pd.read_excel(
+                workbook,
+                sheet_name=sheet,
             )
 
-            tables: list[LoadedTable] = []
-
-            for sheet in workbook.sheet_names:
-                df = pd.read_excel(
-                    workbook,
-                    sheet_name=sheet,
+            tables.append(
+                LoadedTable(
+                    sheet_name=str(sheet),
+                    dataframe=dataframe,
                 )
+            )
 
-                tables.append(
-                    LoadedTable(
-                        sheet_name=str(sheet),
-                        dataframe=df,
-                    )
-                )
+        return tables
 
-            return tables
+    except Exception as exc:
+        last_error = exc
 
-        except Exception as exc:
-            last_error = exc
-
-    raise AnalysisError(
-        "Could not read the uploaded Excel file."
-    ) from last_error
+    raise AnalysisError("Could not read the uploaded Excel file.") from last_error
 
 
 def _usable_dataframe(df: pd.DataFrame) -> bool:
@@ -115,26 +113,28 @@ def _usable_dataframe(df: pd.DataFrame) -> bool:
         values = df[column]
 
         if values.notna().any():
-            if values.astype(str).str.strip().ne("").any():
+            non_empty = (
+                values.astype(str)
+                .str.strip()
+                .replace("nan", "")
+                .ne("")
+                .any()
+            )
+
+            if non_empty:
                 return True
 
     return False
 
 
-def read_uploaded_file(
-    filename: str,
-    content: bytes,
-) -> LoadedFile:
-
+def read_uploaded_file(filename: str, content: bytes) -> LoadedFile:
     if not filename or not filename.strip():
         raise AnalysisError("A filename is required.")
 
     if not content:
         raise AnalysisError("Uploaded file is empty.")
 
-    file_size = len(content)
-
-    if file_size > MAX_UPLOAD_BYTES:
+    if len(content) > MAX_UPLOAD_BYTES:
         raise AnalysisError(
             "Uploaded file is too large. Maximum size is 25 MB."
         )
@@ -149,12 +149,10 @@ def read_uploaded_file(
     notes: list[str] = []
 
     if ext == ".csv":
-        dataframe = _read_csv(content)
-
         tables = [
             LoadedTable(
                 sheet_name="",
-                dataframe=dataframe,
+                dataframe=_read_csv(content),
             )
         ]
 
@@ -175,17 +173,17 @@ def read_uploaded_file(
             "No usable rows and columns were found in the uploaded file."
         )
 
-    ignored_count = len(tables) - len(usable_tables)
+    if len(usable_tables) != len(tables):
+        ignored = len(tables) - len(usable_tables)
 
-    if ignored_count > 0:
         notes.append(
-            f"Ignored {ignored_count} empty worksheet(s)."
+            f"Ignored {ignored} empty worksheet(s)."
         )
 
     return LoadedFile(
         filename=filename,
         file_type=file_type,
-        size_bytes=file_size,
+        size_bytes=len(content),
         sha256=hashlib.sha256(content).hexdigest(),
         tables=usable_tables,
         notes=notes,
